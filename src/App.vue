@@ -11,27 +11,14 @@
         <i class="fa-solid fa-trash"></i>
       </div>
     </div>
-
-  <!-- Email Task Section -->
-    <div v-for="task in emailTasks" :key="task.id" class="task draggable relative cursor-pointer text-2xl customshadow p-9 rounded-[50%] flex flex-col space-y-2 items-center justify-between">
+    <div v-for="task in allTasks" :key="task.id" class="task draggable relative cursor-pointer text-2xl customshadow p-9 rounded-[50%] flex flex-col space-y-2 items-center justify-between">
       <i class="fa-solid fa-envelope"></i>
-      <p>{{ task.name}}</p>
+      <p>{{ allTasks}}</p>
       <div class="flex items-center space-x-2">
         <i class="fa-solid fa-edit cursor-pointer" @click="openTaskModel(task.category,task.id)"></i>
         <i class="fa-solid fa-trash" @click.stop="removeTask(task.category,task.id)"></i>
       </div>
     </div>
-
-    <!-- Redirect Tasks Section -->
-    <div v-for="task in redirectTasks" :key="task.id" class="task draggable relative cursor-pointer text-2xl customshadow p-9 rounded-[50%] flex flex-col space-y-2 items-center justify-between">
-      <i class="fa-solid fa-diamond-turn-right"></i>
-      <p>{{ task.name }}</p>
-      <div class="flex items-center space-x-2">
-        <i class="fa-solid fa-edit cursor-pointer" @click="openTaskModel(task.category,task.id)"></i>
-        <i class="fa-solid fa-trash" @click.stop="removeTask(task.category,task.id)"></i>
-      </div>
-    </div>
-
 
     <Sidebar />
 
@@ -48,12 +35,8 @@ import Sidebar from './components/Sidebar.vue';
 const store = useStore();
 
 
-const emailTasks = computed(() => store.getters.getAllTasks.emailTasks);
+const allTasks = computed(() => store.getters.getAllTasks);
 
-
-const redirectTasks=computed(()=>{
-  return store.getters.getAllTasks.redirectTasks
-})
 
 
 let activeTask = ref(null);
