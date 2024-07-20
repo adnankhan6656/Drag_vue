@@ -1,63 +1,55 @@
 <template>
   <div class="h-screen w-full flex items-center justify-center relative">
-    <!-- Start Task div -->
-    <div class="draggable relative cursor-pointer text-2xl customshadow p-9 rounded-[50%] flex flex-col space-y-2 items-center justify-between"
-         >
-      <i class="fa-solid fa-play"></i>
-    
-      <p>Start</p>
-      <div class="flex items-center space-x-2">
-        <i class="fa-solid fa-edit cursor-pointer" @click="openTaskModel('startTask')" ></i>
-        <i class="fa-solid fa-trash"></i>
-      </div>
-    </div>
-    <div v-for="task in allTasks" :key="task.id" class="task draggable relative cursor-pointer text-2xl customshadow p-9 rounded-[50%] flex flex-col space-y-2 items-center justify-between">
-      <i class="fa-solid fa-envelope"></i>
-      <p>{{ allTasks}}</p>
-      <div class="flex items-center space-x-2">
-        <i class="fa-solid fa-edit cursor-pointer" @click="openTaskModel(task.category,task.id)"></i>
-        <i class="fa-solid fa-trash" @click.stop="removeTask(task.category,task.id)"></i>
-      </div>
-    </div>
-
-    <Sidebar />
-
    
+    <div class="left w-[80%] dropzone height-full ">
+      <div v-for="task in allTasks"    :key="task.id">
+        <div class="task p-9 draggable customshadow w-[200px]  rounded-[50%] flex flex-col space-y-2 items-center justify-center">
+          <i :class="task.icon"></i>
+          <p class="text-sm">{{ task.name }}</p>
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-edit cursor-pointer" @click="openTaskModel(task.id)"></i>
+            <i class="fa-solid fa-trash cursor-pointer" v-if="task.id !== 'startTask'" @click="removeTask(task.id)"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="right w-[20%]">
+      <Sidebar />
+    </div>
     <component v-if="activeTask" :is="activeTask.component" @close="activeTask = null" :activeTaskData="activeTask"/>
   </div>
 </template>
 
 <script setup>
+import interact from 'interactjs';
 import { useStore } from 'vuex';
-import { ref, computed,onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import Sidebar from './components/Sidebar.vue';
 
 const store = useStore();
 
-
-const allTasks = computed(() => store.getters.getAllTasks);
-
-
+const allTasks = computed(() => {
+  console.log(store.getters.getAllTasks)
+  return store.getters.getAllTasks
+});
 
 let activeTask = ref(null);
-const openTaskModel = (category,taskId) => {
-  const task = store.getters.getTaskById(category,taskId);
+
+const openTaskModel = (taskId) => {
+  const task = store.getters.getTaskById(taskId);
   if (task) {
     activeTask.value = task;
   }
 };
 
-
-const removeTask = (category,taskId) => {
-  store.commit('removeTask', {category,taskId});
+const removeTask = (taskId) => {
+  store.commit('removeTask', taskId);
   if (activeTask.value && activeTask.value.id === taskId) {
     activeTask.value = null;
   }
 };
-
-import interact from 'interactjs';
-onMounted(() => {
-  interact('.draggable')
+  onMounted(()=>{
+    interact('.draggable')
     .draggable({
       inertia: true,
       modifiers: [
@@ -78,7 +70,8 @@ onMounted(() => {
         target.setAttribute('data-y', y);
       },
     });
-});
+  })
+
 
 </script>
 
@@ -86,7 +79,24 @@ onMounted(() => {
 .customshadow {
   box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
 }
+
 .task {
-  /* Styling for task divs */
+  
+  margin-bottom: 20px; 
+}
+
+.task-wrapper {
+  position: relative;
+}
+
+.task-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 90%;
+  left: 100px; 
+  width: 2px; 
+  height: calc(50% - 20px); 
+  background-color: #000; 
+  z-index: -1; 
 }
 </style>

@@ -1,13 +1,8 @@
 <template>
   <div class="sidebar startSidebar h-screen overflow-y-scroll w-[20%] flex flex-col justify-center items-center text-2xl font-bold space-y-4 absolute top-0 right-0 p-3 customshadow">
-    <!-- Add Email Task Button -->
-    <div class="task flex items-center space-x-3 cursor-pointer" @click="addEmailTask">
-      <i class="fa-solid fa-envelope"></i>
-      <button>Email</button>
-    </div>
-    <div class="task flex items-center space-x-3 cursor-pointer" @click="addRedirectTask">
-      <i class="fa-solid fa-diamond-turn-right"></i>
-      <button>Redirect</button>
+    <div v-for="taskType in taskTypes" :key="taskType.category" class="task flex items-center space-x-3 cursor-pointer" @click="addTask(taskType)">
+      <i :class="taskType.icon"></i>
+      <button>{{ taskType.label }}</button>
     </div>
   </div>
 </template>
@@ -15,23 +10,47 @@
 <script setup>
 import { useStore } from 'vuex';
 import EmailTask from '../components/models/EmailTask.vue';
-import RedirectTask from "../components/models/RedirectTask.vue"
+import RedirectTask from "../components/models/RedirectTask.vue";
+import TestCode from "../components/models/TestCode.vue";
+
 const store = useStore();
 
+const taskTypes = [
+  {
+    category: 'email',
+    label: 'Email',
+    icon: 'fa-solid fa-envelope',
+    component: EmailTask,
+  },
+  {
+    category: 'redirect',
+    label: 'Redirect',
+    icon: 'fa-solid fa-diamond-turn-right',
+    component: RedirectTask,
+  },
+  {
+    category: 'testCode',
+    label: 'Test Code',
+    icon: 'fa-solid fa-code',
+    component: TestCode,
+  },
+];
 
-const addEmailTask = () => {
-  const emailTaskId = 'emailTask_' + Date.now(); 
-  const emailTaskName = `Email Task ${store.state.tasks.emailTasks.length + 1}`; 
-  store.commit('addTask', { id: emailTaskId, name: emailTaskName, component: EmailTask, initData: {},category:'email' });
+const getTaskCount = (category) => {
+  return store.state.tasks.filter(task => task.category === category).length;
 };
 
-const addRedirectTask=()=>{
-  const redirectTaskId = 'redirectTask_' + Date.now();
-  const redirectTaskName = `Redirect Task ${store.state.tasks.redirectTasks.length + 1}`;
-  store.commit('addTask',{id:redirectTaskId,name:redirectTaskName,component:RedirectTask,initData:{},category:'redirect'})
-}
+const addTask = (taskType) => {
+  const taskId = `${taskType.category}Task_${Date.now()}`;
+  const taskName = `${taskType.label} Task ${getTaskCount(taskType.category) + 1}`;
+  store.commit('addTask', {
+    id: taskId,
+    name: taskName,
+    component: taskType.component,
+    category: taskType.category,
+    icon: taskType.icon
+  });
+
+
+};
 </script>
-
-<style scoped>
-
-</style>

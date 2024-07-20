@@ -4,21 +4,18 @@
       <i class="absolute top-0 right-0 fa-solid fa-xmark cursor-pointer p-11" @click="$emit('close')"></i>
     </button>
     <p class="text-2xl">Add Field</p>
-    <!-- <select @change="generateFieldDynamic($event)"  class="p-3 rounded-lg my-3">
-      <option value="" disabled selected>Select Field</option>
-      <option value="textField">Text Field</option>
-      <option value="numberField">Number Field</option>
-    </select>
-    <div v-for="(dynamicField,index) in dynamicFields" class="mt-4" :key="index">
-      <p>Label :</p>
-      <input class="bg-slate-200 p-3 focus:outline-none text-lg rounded-lg" type="text" v-model="dynamicField.label" :placeholder="dynamicField.label" >
-      <p v-if="dynamicField.labelError" class="text-red-500">Label is required</p>
-      <p>Value</p>
-      <input class="bg-slate-200 p-3 focus:outline-none text-lg rounded-lg" :type="dynamicField.type" v-model="dynamicField.value"  :placeholder="dynamicField.label" >
-      <p v-if="dynamicField.valueError" class="text-red-500">Value is required</p>
-      <i class="fa-solid fa-minus text-xl cursor-pointer" @click="removeFromDyanmics(index)" ></i>
-    </div> -->
+    <div v-for="(field, index) in dynamicFields" :key="index">
+      <label>{{ field.name }}</label>
+      <input type="text" v-model="field.value" />
+      <button @click="removeField(index)">Remove</button>
+    </div>
+    <div>
+      <input type="text" v-model="newFieldName" placeholder="Field Name" />
+      <input type="text" v-model="newFieldValue" placeholder="Field Value" />
+      <button @click="addField">Add Field</button>
+    </div>
   </div>
+
 </template>
 
 <script setup>
@@ -29,8 +26,37 @@ import { ref,computed } from 'vue';
 const closeTaskModel = taskId => {
     store.commit('toggleTaskModel', { taskId, isOpen: false })
 }
+const taskId = 'startTask';
 
+// Retrieve dynamic fields from Vuex store
+const dynamicFields = computed(() => store.getters.getTaskById(taskId).data.dynamicFields);
 
+// Update dynamic field data in Vuex store
+const updateField = (index, newValue) => {
+  store.commit('updateDynamicField', {
+    taskId,
+    index,
+    fieldData: {
+      ...dynamicFields.value[index],
+      value: newValue,
+    },
+  });
+};
+
+// Add a new dynamic field
+const addField = (type) => {
+  const newField = {
+    name: `Field ${dynamicFields.value.length + 1}`,
+    value: '',
+    type: type // Add type property for differentiating field types
+  };
+  store.commit('addDynamicField', { taskId, field: newField });
+};
+
+// Remove a dynamic field
+const removeField = (index) => {
+  store.commit('removeDynamicField', { taskId, index });
+};
 
 </script>
 

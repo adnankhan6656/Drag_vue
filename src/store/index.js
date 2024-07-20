@@ -1,47 +1,45 @@
-// store/index.js
 
 import { createStore } from 'vuex';
 import StartTask from '../components/models/StartTask.vue';
-import EmailTask from '../components/models/EmailTask.vue';
+
 
 const store = createStore({
   state: {
     tasks: [
       {
-        startTask: {
-          id: 'startTask',
-          category:'startTask',
-          name: 'Start',
-          component: StartTask,
-          data:{}
-        }
-      }
-      
+        id: 'startTask',
+        category: 'startTask',
+        name: 'Start',
+        component: StartTask,
+        data: {
+          dynamicFields: [],
+        },
+        icon: 'fa-solid fa-play',
+      },
     ]
   },
   mutations: {
-    addTask(state, { id, name, component, initData,category }) {
-        state.tasks.push({ id, name, component, data: initData,category:'email' });
+    addTask(state, { id, name, component, category, icon }) {
+      state.tasks.push({ id, name, component, data: {}, category, icon });
     },
-    removeTask(state, task) {
-        const index = state.tasks.findIndex(task => task.id === task.taskId);
-          state.tasks.splice(index, 1);
+    removeTask(state, taskId) {
+      const index = state.tasks.findIndex(task => task.id === taskId);
+      state.tasks.splice(index, 1);
     },
-    
+   
   },
-  actions: {
-    
-  },
-  getters: {
-    getTaskById: (state) => (category,taskId) => {
-          return state.tasks.find(task => task.id === taskId)
-    },
-    getAllTasks: (state) => {
-      return {
-       tasks: state.tasks
-      };
-    },
-  },
+  getters:{
+    getTaskById: (state) => (taskId) => {
+      return state.tasks.find(task => task.id === taskId)
+},
+getAllTasks: (state) => {
+  return state.tasks
+}
+  }
+ 
 });
 
+
 export default store;
+
+
