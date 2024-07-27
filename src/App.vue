@@ -1,9 +1,9 @@
 <template>
   <div class="h-screen w-full flex items-center justify-center relative">
-   
-    <div class="left w-[80%] dropzone height-full ">
-      <div v-for="task in allTasks"    :key="task.id">
-        <div class="task p-9 draggable customshadow w-[200px]  rounded-[50%] flex flex-col space-y-2 items-center justify-center">
+    <div class="left w-[80%] dropzone height-full">
+      <div v-for="(task,index) in allTasks" :key="task.id" >
+        <div class="task p-9 draggable customshadow w-[200px] rounded-[50%] flex flex-col space-y-2 items-center justify-center" :id="task.id">
+          <p>{{ index +1 }}</p>
           <i :class="task.icon"></i>
           <p class="text-sm">{{ task.name }}</p>
           <div class="flex items-center space-x-2">
@@ -12,11 +12,13 @@
           </div>
         </div>
       </div>
+      
+      <component v-if="activeTask" :is="activeTask.component" @close="activeTask = null" :activeTaskData="activeTask" />
     </div>
     <div class="right w-[20%]">
       <Sidebar />
     </div>
-    <component v-if="activeTask" :is="activeTask.component" @close="activeTask = null" :activeTaskData="activeTask"/>
+    
   </div>
 </template>
 
@@ -28,10 +30,8 @@ import Sidebar from './components/Sidebar.vue';
 
 const store = useStore();
 
-const allTasks = computed(() => {
-  console.log(store.getters.getAllTasks)
-  return store.getters.getAllTasks
-});
+const allTasks = computed(() => store.getters.getAllTasks);
+
 
 let activeTask = ref(null);
 
@@ -44,34 +44,33 @@ const openTaskModel = (taskId) => {
 
 const removeTask = (taskId) => {
   store.commit('removeTask', taskId);
+  store.commit('unlinkTasks', taskId);
   if (activeTask.value && activeTask.value.id === taskId) {
     activeTask.value = null;
   }
 };
-  onMounted(()=>{
-    interact('.draggable')
-    .draggable({
-      inertia: true,
-      modifiers: [
-        interact.modifiers.restrictRect({
-          restriction: 'parent',
-          endOnly: true,
-        }),
-      ],
-      autoScroll: true,
-      onmove: (event) => {
-        const target = event.target;
-        const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-        const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
 
-        target.style.transform = `translate(${x}px, ${y}px)`;
+onMounted(() => {
+  interact('.draggable').draggable({
+    inertia: true,
+    modifiers: [
+      interact.modifiers.restrictRect({
+        restriction: 'parent',
+        endOnly: true,
+      }),
+    ],
+    autoScroll: true,
+    onmove: (event) => {
+      const target = event.target;
+      const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+      const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
 
-        target.setAttribute('data-x', x);
-        target.setAttribute('data-y', y);
-      },
-    });
-  })
-
+      target.style.transform = `translate(${x}px, ${y}px)`;
+      target.setAttribute('data-x', x);
+      target.setAttribute('data-y', y);
+    },
+  });
+});
 
 </script>
 
@@ -79,24 +78,12 @@ const removeTask = (taskId) => {
 .customshadow {
   box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
 }
-
-.task {
-  
-  margin-bottom: 20px; 
-}
-
-.task-wrapper {
-  position: relative;
-}
-
-.task-wrapper::before {
-  content: '';
+.links-svg {
   position: absolute;
-  top: 90%;
-  left: 100px; 
-  width: 2px; 
-  height: calc(50% - 20px); 
-  background-color: #000; 
-  z-index: -1; 
+  top: 0;
+  left: 0;
+  z-index: -1;
 }
+
+
 </style>
