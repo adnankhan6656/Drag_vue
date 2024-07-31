@@ -1,0 +1,857 @@
+<template>
+  <p>{{ editablephase }}</p>
+  <main class="tw-w-full tw-flex tw-flex-col tw-gap-6 md:tw-pt-4 md:tw-gap-5">
+    <div
+      class="tw-flex tw-items-center tw-gap-4 tw-w-full project-start-wrapper tw-flex-col rsm:tw-flex-row rsm:tw-gap-12 rsm:tw-justify-between tw-py-4"
+    >
+      <div class="tw-flex tw-items-center tw-gap-4">
+        <Text class="!tw-text-xs !tw-font-normal" whiteSpace="nowrap"
+          >Proposed Project Start Date:</Text
+        >
+        <el-form :model="formData" class="proposed_project_date">
+          <el-form-item class="tw-mb-0">
+            <!-- :class="{ 'is-error': isFormError.startDate }" -->`
+            <NoBgDatePicker
+              @change="updateEstimation"
+              v-model="formData.suggestedStartDate"
+              :disabled="isSubContractor || isLockTemplateModifiedChecker"
+              placeholder="DD/MM/YYYY"
+              class="!tw-w-[104px] !tw-max-w-full"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+      <Button
+        v-if="showTimeLineButton"
+        variant="secondary-reverse"
+        :label="showGannt ? 'PROJECT ESTIMATE' : 'PROJECT TIMELINE'"
+        class="rsm:!tw-w-[auto]"
+        @click="toggleShowGanttState"
+      >
+        <template #prefix
+          ><GanttIcon v-if="!showGannt" /><CoinsIcon v-else
+        /></template>
+      </Button>
+    </div>
+    <SchedulePage v-if="showGannt" :isProperty="true" />
+    <div
+      class="tw-flex tw-flex-col tw-gap-6 tw-w-full accordion__section"
+      v-else
+    >
+      <draggable
+        v-model="editablephase"
+        group="my-group"
+        @end="onDragEnd"
+        itemKey="id"
+        :animation="400"
+        handle=".drag_panel_icon"
+        class="tw-flex tw-flex-col tw-gap-6 tw-w-full accordion__section"
+      >
+        <template #item="{ element, index }">
+          <v-expansion-panels multiple>
+            <v-expansion-panel v-for="(estimate, i) in [element]" :key="i">
+              <v-expansion-panel-title :color="estimate.color">
+                <div class="heading">
+                  <div class="drag_panel_icon">
+                    <p>{{ estimate.id }}</p>
+                    <v-icon icon="mdi-dots-vertical"></v-icon>
+                    <v-icon icon="mdi-dots-vertical"></v-icon>
+                  </div>
+                  <!-- <v-icon icon="mdi-dots-grid"></v-icon> -->
+                  <h6 class="accordion_button_title">
+                    {{ getPanelName(estimate.stageType, index) }}
+                  </h6>
+                </div>
+                <div
+                  class="assign_button tw-flex tw-justify-end tw-ml-auto tw-gap-4 tw-w-auto"
+                >
+                  <Button
+                    variant="custom"
+                    label="Awaiting Response"
+                    height="24px"
+                    borderColor="#FFA500"
+                    activeBgColor="#FFF"
+                    activeFontColor="#FFA500"
+                    fontSize="12px"
+                    fontWeight="700"
+                    width="auto"
+                    :isCapitalize="true"
+                    v-if="isShowAwaitingResponse(estimate)"
+                  >
+                    <template #prefix>
+                      <ExclamationFilledIcon />
+                    </template>
+                  </Button>
+                  <div class="card__wrapper" v-if="isShowEditable(estimate)">
+                    <div class="card__img">
+                      <UserProfileLogo
+                        class="tw-text-sm"
+                        v-if="estimate?.workStation?.id"
+                        :userName="estimate?.workStation?.name"
+                      />
+                      <img
+                        v-else
+                        :src="
+                          userImagesMap[estimate?.workStation?.id]
+                            ? userImagesMap[estimate?.workStation?.id]
+                            : require('@/assets/images/user-placeholder.png')
+                        "
+                      />
+                    </div>
+                    <div class="card__text">
+                      <span>{{
+                        estimate?.workStation?.name
+                          ? estimate?.workStation?.name
+                          : activeUserWorkstation?.name
+                      }}</span>
+                    </div>
+                    <v-icon icon="mdi-chevron-right" />
+                  </div>
+
+                  <div
+                    v-if="isShowAwaitingResponse(estimate)"
+                    class="card__wrapper"
+                  >
+                    <div class="card__img">
+                      <img
+                        :src="
+                          userImagesMap[estimate?.assignPhaseWorkStation?.id]
+                            ? userImagesMap[
+                                estimate?.assignPhaseWorkStation?.id
+                              ]
+                            : require('@/assets/images/user-placeholder.png')
+                        "
+                      />
+                    </div>
+                    <div class="card__text">
+                      <!-- <p>
+  {{ estimate?.user?.firstName }}
+  {{ estimate?.user?.lastName }}
+  </p> -->
+                      <span>{{ getAssignPhaseInfo(estimate) }}</span>
+                    </div>
+                    <v-icon icon="mdi-chevron-right" />
+                  </div>
+
+                  <Button
+                    variant="custom"
+                    label="Assign Phase"
+                    height="24px"
+                    borderColor="#FFA500"
+                    activeBgColor="#FFF"
+                    activeFontColor="#FFA500"
+                    fontSize="12px"
+                    fontWeight="700"
+                    width="auto"
+                    :isCapitalize="true"
+                    v-if="isShowAssignPhase(estimate)"
+                    @click="openAssignPhaseModal(estimate)"
+                  >
+                    <template #prefix> <TradeAvatarWithPlusYellow /> </template
+                  ></Button>
+                </div>
+              </v-expansion-panel-title>
+              <v-expansion-panel-text v-if="isShowPanelText">
+                <!-- <EstimateRestrictedForm
+  :isLocked="true"
+  :formProp="estimate"
+  v-if="isShowLockForm(estimate)"
+  /> -->
+                <EstimateFormCardEditable
+                  :formProp="estimate"
+                  :phaseIndex="index"
+                  :key="index"
+                  :isPhaseAssignedToMe="isPhaseAssignedToMe(estimate)"
+                  @on-update-Estimation="updateEstimation"
+                />
+                <EstimateFormCardNotEditable
+                  :formProp="estimate"
+                  :isSubContractor="isSubContractor"
+                  :projectProperties="projectProperties"
+                  @onAcceptPhase="onAcceptPhase"
+                  @onRejectPhase="onRejectPhase"
+                  v-if="isShowNotEditable(estimate)"
+                /> </v-expansion-panel-text></v-expansion-panel
+          ></v-expansion-panels>
+        </template>
+      </draggable>
+
+      <EstimateRestrictedForm v-if="state.showLockedState" />
+    </div>
+    <!-- Not Ediatble -->
+    <div class="tw-flex tw-flex-col tw-gap-6 tw-w-full accordion__section">
+      <v-expansion-panels multiple>
+        <v-expansion-panel
+          v-for="(estimate, index) in nonEditablePhases"
+          :key="index"
+        >
+          <v-expansion-panel-title :color="estimate.color">
+            <div class="heading">
+              <div class="drag_panel_icon">
+                <p>{{ estimate.id }}</p>
+              </div>
+              <!-- <v-icon icon="mdi-dots-grid"></v-icon> -->
+              <h6 class="accordion_button_title">
+                {{ getPanelName(estimate.stageType, index) }}
+              </h6>
+            </div>
+            <div
+              class="assign_button tw-flex tw-justify-end tw-ml-auto tw-gap-4 tw-w-auto"
+            >
+              <Button
+                variant="custom"
+                label="Awaiting Response"
+                height="24px"
+                borderColor="#FFA500"
+                activeBgColor="#FFF"
+                activeFontColor="#FFA500"
+                fontSize="12px"
+                fontWeight="700"
+                width="auto"
+                :isCapitalize="true"
+                v-if="isShowAwaitingResponse(estimate)"
+              >
+                <template #prefix>
+                  <ExclamationFilledIcon />
+                </template>
+              </Button>
+              <div class="card__wrapper" v-if="isShowEditable(estimate)">
+                <div class="card__img">
+                  <UserProfileLogo
+                    class="tw-text-sm"
+                    v-if="estimate?.workStation?.id"
+                    :userName="estimate?.workStation?.name"
+                  />
+                  <img
+                    v-else
+                    :src="
+                      userImagesMap[estimate?.workStation?.id]
+                        ? userImagesMap[estimate?.workStation?.id]
+                        : require('@/assets/images/user-placeholder.png')
+                    "
+                  />
+                </div>
+                <div class="card__text">
+                  <span>{{
+                    estimate?.workStation?.name
+                      ? estimate?.workStation?.name
+                      : activeUserWorkstation?.name
+                  }}</span>
+                </div>
+                <v-icon icon="mdi-chevron-right" />
+              </div>
+
+              <div
+                v-if="isShowAwaitingResponse(estimate)"
+                class="card__wrapper"
+              >
+                <div class="card__img">
+                  <img
+                    :src="
+                      userImagesMap[estimate?.assignPhaseWorkStation?.id]
+                        ? userImagesMap[estimate?.assignPhaseWorkStation?.id]
+                        : require('@/assets/images/user-placeholder.png')
+                    "
+                  />
+                </div>
+                <div class="card__text">
+                  <!-- <p>
+  {{ estimate?.user?.firstName }}
+  {{ estimate?.user?.lastName }}
+  </p> -->
+                  <span>{{ getAssignPhaseInfo(estimate) }}</span>
+                </div>
+                <v-icon icon="mdi-chevron-right" />
+              </div>
+
+              <Button
+                variant="custom"
+                label="Assign Phase"
+                height="24px"
+                borderColor="#FFA500"
+                activeBgColor="#FFF"
+                activeFontColor="#FFA500"
+                fontSize="12px"
+                fontWeight="700"
+                width="auto"
+                :isCapitalize="true"
+                v-if="isShowAssignPhase(estimate)"
+                @click="openAssignPhaseModal(estimate)"
+              >
+                <template #prefix> <TradeAvatarWithPlusYellow /> </template
+              ></Button>
+            </div>
+          </v-expansion-panel-title>
+          <v-expansion-panel-text v-if="isShowPanelText">
+            <!-- <EstimateRestrictedForm
+  :isLocked="true"
+  :formProp="estimate"
+  v-if="isShowLockForm(estimate)"
+  /> -->
+
+            <EstimateFormCardNotEditable
+              :formProp="estimate"
+              :isSubContractor="isSubContractor"
+              :projectProperties="projectProperties"
+              @onAcceptPhase="onAcceptPhase"
+              @onRejectPhase="onRejectPhase"
+              v-if="
+                isShowNotEditable(estimate)
+              " /></v-expansion-panel-text></v-expansion-panel
+      ></v-expansion-panels>
+    </div>
+    <Button
+      v-if="!showGannt"
+      class="button"
+      label="add another phase"
+      @click="addPhase"
+      :disabled="isLockTemplateModifiedChecker || isEstimateSubmit"
+    />
+    <AssignPhaseModal
+      v-if="isOpenAssignPhaseModal"
+      :estimateId="formData?.id"
+      :phaseId="selectedPhase?.id"
+      @on-close="onCloseModal"
+      @onAssignPhase="onAssignPhase"
+    />
+
+    <GanttChart
+      v-if="showGannt && getGanttChartEstimateFormData"
+      :isEditable="false"
+      :estimateData="getGanttChartEstimateFormData"
+      :isShowAllPhase="true"
+    />
+  </main>
+</template>
+<script setup>
+import { computed, reactive, onBeforeMount } from "vue";
+import { useStore } from "vuex";
+import Text from "@/core/components/ui/general/Text.vue";
+import NoBgDatePicker from "@/core/components/ui/inputs/NoBgDatePicker.vue";
+import EstimateRestrictedForm from "@/modules/jobs/components/estimates/EstimateRestrictedForm.vue";
+import EstimateFormCardEditable from "@/modules/jobs/components/estimates/EstimateFormCardEditable.vue";
+import EstimateFormCardNotEditable from "@/modules/jobs/components/estimates/EstimateFormCardNotEditable.vue";
+import Button from "@/core/components/ui/general/Button.vue";
+import { JOB_TEMPLATE_STORE } from "@/store/modules/job-template";
+import TradeAvatarWithPlusYellow from "@/core/components/icons/TradeAvatarWithPlusYellow.vue";
+import ExclamationFilledIcon from "@/core/components/icons/ExclamationFilledIcon.vue";
+import GanttIcon from "@/core/components/icons/GanttIcon.vue";
+import CoinsIcon from "@/core/components/icons/CoinsIcon.vue";
+import SchedulePage from "@/modules/jobs/pages/SchedulePage.vue";
+import { ref } from "vue";
+import { JOBS_STORE } from "@/store/modules/jobs";
+import { USER_STORE } from "@/store/modules/user";
+import { WORKSTATION } from "@/store/modules/workstation";
+import {
+  ContractorInvitePermissionEnum,
+  EstimatePhaseStatus,
+} from "@/core/enums/estimateEnum";
+import AssignPhaseModal from "@/modules/jobs/components/modal/AssignPhaseModal.vue";
+import { watch } from "vue";
+import SubContractorEstimationSubmitModal from "../modal/SubContractorEstimationSubmitModal.vue";
+import { getImageApiUrl } from "@/core/utils/common";
+import $axios from "@/core/utils/axios-api-config";
+import UserProfileLogo from "@/core/components/UserProfileLogo.vue";
+import GanttChart from "@/modules/jobs/components/estimates/GanttChart.vue";
+import { ElMessage } from "element-plus";
+import draggable from "vuedraggable";
+const store = useStore();
+import { TRADE_ESTIMATE_STORE } from "@/store/modules/trade-estimate";
+import { nextTick } from "vue";
+const panel = ref([0]);
+const emits = defineEmits([
+  "on-save-estimation",
+  "onAssignPhase",
+  "onAcceptPhase",
+  "on-toggle-gantt",
+]);
+const props = defineProps({
+  estimateForm: Object,
+  showTimeLineButton: Boolean,
+});
+const phaseslist = ref(props.estimateForm.projectStages);
+const showGannt = ref(false);
+
+const userImagesMap = ref({});
+
+const isOpenAssignPhaseModal = ref(false);
+
+const isShowPanelText = ref(true);
+
+const selectedPhase = ref(null);
+
+const formData = computed(
+  () => store.getters[`${JOB_TEMPLATE_STORE}/formData`]
+);
+
+const isFormReadOnly = computed(
+  () => store.getters[`${JOB_TEMPLATE_STORE}/isFormReadOnly`]
+);
+
+const projectDetails = computed(
+  () => store.getters[`${JOBS_STORE}/getJobDetails`]
+);
+
+const projectProperties = computed(
+  () => projectDetails.value?.projectProperties
+);
+
+const errorStatus = ref(false);
+const user = computed(() => store.getters[`${USER_STORE}/user`]);
+
+const activeUserWorkstation = computed(
+  () => store.getters[`${WORKSTATION}/activeUserWorkstation`]
+);
+
+const isSubContractor = computed(
+  () => store.getters[`${JOB_TEMPLATE_STORE}/getIsSubContractor`]
+);
+
+const projectEstimateInvitation = computed(
+  () => store.getters[`${JOB_TEMPLATE_STORE}/getProjectEstimationInvitation`]
+);
+
+const toggleShowGanttState = () => {
+  showGannt.value = !showGannt.value;
+  emits("on-toggle-gantt", showGannt.value);
+};
+
+const onAcceptPhase = (data) => {
+  emits("onAcceptPhase", data);
+};
+
+const onRejectPhase = (data) => {
+  emits("onRejectPhase", data);
+};
+
+const onAssignPhase = () => {
+  emits("onAssignPhase");
+};
+
+const addPhase = () => {
+  if (!isFormReadOnly.value) {
+    store.dispatch(`${JOB_TEMPLATE_STORE}/addProjectStage`);
+    updateEstimation();
+  }
+};
+
+const state = reactive({
+  showLockedState: false,
+});
+
+const getPanelName = (stageType, index) => {
+  return `${stageType === "labour" ? "Phase" : "materials"} ${index + 1}`;
+};
+
+const isEstimateSubmitted = computed(
+  () => store.getters[`${JOB_TEMPLATE_STORE}/getIsEstimateSubmitted`]
+);
+const onDragEnd = (event) => {
+  updatePhaseOrder();
+};
+const isShowNotEditable = (phase) => {
+  if (isEstimateSubmitted.value) return true;
+
+  if (phase?.assignPhaseWorkStation?.id) {
+    if (phase?.assignPhaseWorkStation.id == activeUserWorkstation.value?.id) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  if (
+    phase?.workStation?.id === activeUserWorkstation.value?.id &&
+    phase?.isNew
+  )
+    return false;
+
+  if (phase?.workStation?.id !== activeUserWorkstation.value?.id) return true;
+
+  return false;
+};
+const isShowEditable = (phase) => {
+  if (isEstimateSubmitted.value) return false;
+
+  if (phase?.assignPhaseWorkStation?.id) {
+    if (phase?.assignPhaseWorkStation.id == activeUserWorkstation.value?.id) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    if (
+      phase?.workStation?.id === activeUserWorkstation.value?.id &&
+      phase?.isNew
+    )
+      return true;
+
+    if (phase?.workStation?.id !== activeUserWorkstation.value?.id)
+      return false;
+  }
+
+  return true;
+};
+
+// const isShowLockForm = (phase) => {
+// if (!projectEstimateInvitation.value?.length) return false;
+// if (projectEstimateInvitation.value?.length) {
+// if (
+// projectEstimateInvitation.value[0].permission_type ===
+// ContractorInvitePermissionEnum.BYMAINCONTRACTORONLY
+// ) {
+// if (
+// phase?.workStation?.id !==
+// projectEstimateInvitation.value[0]?.fromContractorId &&
+// phase?.user?.id !== user.value?.id &&
+// phase?.workStation?.id !== activeUserWorkstation.value?.id
+// ) {
+// return true;
+// }
+// } else {
+// return false;
+// }
+// }
+// };
+
+const keyExists = (key) => {
+  return key in userImagesMap.value;
+};
+
+const addUserImage = (id, imageUrl) => {
+  if (!keyExists(id)) {
+    userImagesMap.value[id] = imageUrl;
+    return true;
+  } else {
+    return false;
+  }
+};
+
+const getUserWorkStationProfileImage = async (userDetails) => {
+  if (userDetails) {
+    const profileImage = userDetails.profileImage;
+    if (!keyExists(userDetails.id)) {
+      if (!profileImage) {
+        addUserImage(userDetails.id, "@/assets/images/user-placeholder.png");
+        return;
+      }
+      const imageUrl = getImageApiUrl(profileImage, true);
+      try {
+        const encoded = await $axios.get(imageUrl);
+        addUserImage(userDetails.id, encoded.publicUrl);
+        return encoded.publicUrl;
+      } catch (error) {
+        return null;
+      }
+    }
+  }
+};
+
+const openAssignPhaseModal = (estimate) => {
+  selectedPhase.value = estimate;
+  isOpenAssignPhaseModal.value = !isOpenAssignPhaseModal.value;
+};
+
+const isLockTemplateModifiedChecker = computed(
+  () => store.getters[`${JOB_TEMPLATE_STORE}/lockTemplateModifiedChecker`]
+);
+
+watch(
+  () => props.estimateForm.projectStages,
+  (newValue) => {
+    phaseslist.value = [...newValue];
+    console.log("Inside Watch", phaseslist.value);
+  },
+  { deep: true }
+);
+
+const updateEstimation = async (phaseIndex = null) => {
+  errorStatus.value = true;
+  if (formData.value.suggestedStartDate) {
+    errorStatus.value = false;
+    emits("on-save-estimation", phaseIndex);
+  } else {
+    store.dispatch(`${JOB_TEMPLATE_STORE}/setEstimatePhaseDate`);
+  }
+  await store.dispatch(`${JOB_TEMPLATE_STORE}/setFormError`, {
+    field: "startDate",
+    value: errorStatus.value,
+  });
+};
+
+const onCloseModal = () => {
+  isOpenAssignPhaseModal.value = false;
+};
+
+const isShowAwaitingResponse = (estimate) => {
+  if (estimate?.assignPhaseWorkStation) {
+    if (
+      estimate?.workStation.id == activeUserWorkstation.value?.id &&
+      estimate?.phaseStatus == EstimatePhaseStatus.PENDING
+    ) {
+      return true;
+    }
+
+    return false;
+  } else {
+    return false;
+  }
+};
+
+const isShowAssignPhase = (phase) => {
+  if (phase.stageType !== "materials" && isShowEditable(phase)) {
+    if (phase?.assignPhaseWorkStation) {
+      return false;
+    }
+    return true;
+  }
+
+  return false;
+};
+
+const isPhaseAssignedToMe = (phase) => {
+  if (phase.stageType !== "materials" && isShowEditable(phase)) {
+    if (phase?.assignPhaseWorkStation) {
+      if (
+        phase?.assignPhaseWorkStation?.id == activeUserWorkstation.value?.id
+      ) {
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
+
+  return false;
+};
+
+const isEstimateSubmit = computed(
+  () => store.getters[`${JOB_TEMPLATE_STORE}/isEstimateSubmit`]
+);
+const getAssignPhaseInfo = (phase) => {
+  if (phase?.assignPhaseWorkStation) {
+    const meta = JSON.parse(phase?.assignPhaseWorkStation?.subscription);
+    return meta.metadata.name;
+  }
+
+  return "";
+};
+onBeforeMount(async () => {
+  panel.value = [];
+  props.estimateForm.projectStages.forEach((element, index) => {
+    panel.value.push(index);
+    if (isShowAwaitingResponse(element)) {
+      getUserWorkStationProfileImage(element.assignPhaseWorkStation);
+    } else getUserWorkStationProfileImage(element.workStation);
+  });
+
+  if (!formData.value.id) {
+    updateEstimation();
+  }
+});
+const updatePhaseOrder = async () => {
+  try {
+    const phaseOrderList = editablephase.value.map((phase, index) => ({
+      phaseId: phase.id,
+      orderNumber: index + 1,
+    }));
+    const isOrderChange = editablephase.value.some((phase, index) => {
+      return phase.phaseOrder !== phaseOrderList[index].orderNumber;
+    });
+    console.log("updated phaseorderList ", phaseOrderList);
+
+    if (!isOrderChange) return;
+    await store.dispatch(`${TRADE_ESTIMATE_STORE}/updateEstimatePhaseOrder`, {
+      order: phaseOrderList,
+      estimateId: formData.value?.id,
+    });
+
+    phaseOrderList.forEach((phase, index) => {
+      editablephase.value[index].phaseOrder = phase.orderNumber;
+    });
+  } catch (error) {
+    console.log("update phase order error", error);
+  }
+};
+const editablephase = computed({
+  get() {
+    console.log("Before Sorting:", phaseslist.value);
+    const sortedPhases = phaseslist.value.filter((phase) =>
+      isShowEditable(phase)
+    );
+    // .sort((a, b) => a.phaseOrder - b.phaseOrder);
+    console.log("After Sorting:", sortedPhases);
+    return sortedPhases;
+  },
+  set(newValue) {
+    console.log("setting value before", phaseslist.value);
+    phaseslist.value = newValue;
+  },
+});
+const nonEditablePhases = computed(() => {
+  return phaseslist.value.filter((phase) => !isShowEditable(phase));
+});
+</script>
+<script>
+export default {
+  name: "EstimateFormScreen",
+};
+</script>
+<style lang="scss" scoped>
+.accordion__section {
+  :deep(.v-expansion-panels) {
+    border-radius: 10px !important;
+    gap: 16px;
+    .v-expansion-panel {
+      border-radius: 10px;
+      border-top-left-radius: 10px !important;
+      border-top-right-radius: 10px !important;
+      .v-expansion-panel-title {
+        .heading {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          width: 100%;
+          max-width: 100%;
+
+          .drag_panel_icon {
+            .v-icon {
+              width: 8px;
+              color: rgba($white, 1);
+            }
+          }
+          .accordion_button_title {
+            @include fluidFont(14, 14, 1.2);
+            font-weight: 700;
+            color: rgba($white, 1);
+          }
+        }
+
+        .assign_button {
+          width: calc(100% - 120px);
+        }
+
+        .v-expansion-panel-title__icon {
+          .v-icon {
+            color: rgba($white, 1);
+          }
+        }
+      }
+
+      .v-expansion-panel-text {
+        .v-expansion-panel-text__wrapper {
+          padding: 0;
+        }
+      }
+    }
+  }
+}
+
+.project-start-wrapper {
+  border-bottom: 1px solid rgba($PrimaryBlueLight, 1);
+  :deep(.el-form) {
+    .el-form-item {
+      .el-form-item__content {
+        border-bottom: 1px solid rgba(12, 15, 74, 0.2);
+        .el-input {
+          width: 100%;
+          max-width: 100%;
+          height: auto;
+          min-height: auto;
+          .el-input__wrapper {
+            background-color: transparent;
+            box-shadow: none;
+            .el-input__prefix {
+              .el-input__prefix-inner {
+                .el-icon {
+                  svg {
+                    color: #ffa500;
+                  }
+                }
+              }
+            }
+          }
+          .el-input__inner {
+            @include fluidFont(12, 12, 1.5);
+            font-weight: 500;
+            color: rgba($blueDark, 0.5);
+            &::placeholder {
+              @include fluidFont(12, 12, 1.5);
+              font-weight: 500;
+              color: rgba($blueDark, 0.5);
+            }
+          }
+          .el-input__suffix {
+            .el-input__suffix-inner {
+              .clear-icon {
+                margin-left: 16px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.is-error input,
+.is-error select {
+  border-color: red;
+}
+.is-error {
+  border: 1px solid red;
+}
+
+.card__wrapper {
+  display: flex;
+  background-color: rgba($white, 1);
+  box-shadow: 0px 0px 8px 0px #0c0f4a14;
+  border-radius: 6px;
+  align-items: center;
+  min-width: auto;
+  gap: 4px;
+  padding: 4px 8px;
+  justify-content: space-between;
+
+  .card__img {
+    width: 16px;
+    height: 16px;
+    border-radius: 100%;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .card__text {
+    width: calc(100% - 50px);
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+
+    p {
+      @include fluidFont(12, 12, 1.2);
+      font-weight: 500;
+      color: rgba(72, 89, 123, 1);
+      letter-spacing: 0.4px;
+      padding-right: 4px;
+    }
+
+    span {
+      @include fluidFont(12, 12, 1.2);
+      font-weight: 700;
+      color: rgba(72, 89, 123, 1);
+      letter-spacing: 0.4px;
+      padding-left: 4px;
+    }
+  }
+
+  .v-icon {
+    color: rgba(128, 130, 159, 1);
+    @include fluidFont(16, 16, 1);
+  }
+}
+</style>
